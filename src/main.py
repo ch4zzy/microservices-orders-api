@@ -4,8 +4,8 @@ from api import router
 from lifespan import lifespan
 
 app = FastAPI(
-    title="Users API",
-    description="Мікросервіс для створення користувачів",
+    title="Orders API",
+    description="Мікросервіс для створення замовлень",
     version="1.0.0",
     lifespan=lifespan,
 )
