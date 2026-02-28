@@ -8,6 +8,8 @@ class Base(AsyncAttrs, DeclarativeBase):
 
 
 class Order(Base):
+    __tablename__ = "orders"
+
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer)
     name = Column(String)

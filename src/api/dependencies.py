@@ -27,7 +27,7 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]
 
 async def get_users_client():
     async with httpx.AsyncClient(
-        base_url=f"http://{settings.USERS_SERVICE_HOST}:{settings.USERS_SERVICE_PORT}",
-        timeout=60.0
+            base_url=f"http://{settings.USERS_API_HOST}:{settings.USERS_API_PORT}",
+            timeout=60.0
     ) as client:
         yield client

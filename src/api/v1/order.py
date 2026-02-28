@@ -9,7 +9,7 @@ from api.dependencies import get_db_session, get_users_client
 from database.models import Order
 from schemas.order import OrderList, OrderResponse, OrderCreate, OrderPut, OrderPatch
 
-router = APIRouter(prefix="/user", tags=["user"])
+router = APIRouter(prefix="/order", tags=["order"])
 
 
 @router.get(
@@ -26,7 +26,7 @@ async def list_orders(
 
 
 @router.get(
-    "/{user_id}",
+    "/{order_id}",
     response_model=OrderResponse,
     status_code=status.HTTP_200_OK
 )
