@@ -4,13 +4,13 @@ from pydantic import BaseModel
 
 
 class OrderBase(BaseModel):
-    user_id: int
     name: str
     quantity: int
 
 
 class OrderResponse(OrderBase):
     id: int
+    user_id: int
 
     class Config:
         from_attributes = True
@@ -32,4 +32,3 @@ class OrderPatch(BaseModel):
 
 class OrderList(BaseModel):
     orders: list[OrderResponse]
-

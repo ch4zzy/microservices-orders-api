@@ -1,11 +1,14 @@
 from collections.abc import AsyncGenerator
 
 import httpx
-from fastapi import HTTPException
+from fastapi import HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
 from core.config import settings
+from utils.jwt import verify_token
 
 
 def _get_state_service(request: Request, service_name: str):
@@ -31,3 +34,16 @@ async def get_users_client():
             timeout=60.0
     ) as client:
         yield client
+
+
+security = HTTPBearer()
+
+
+async def get_current_user(
+        credentials: HTTPAuthorizationCredentials = Depends(security)
+):
+    try:
+        payload = verify_token(credentials.credentials)
+        return payload
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")

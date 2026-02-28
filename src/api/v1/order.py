@@ -1,11 +1,10 @@
-import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from api.dependencies import get_db_session, get_users_client
+from api.dependencies import get_db_session, get_current_user
 from database.models import Order
 from schemas.order import OrderList, OrderResponse, OrderCreate, OrderPut, OrderPatch
 
@@ -18,7 +17,8 @@ router = APIRouter(prefix="/order", tags=["order"])
     status_code=status.HTTP_200_OK
 )
 async def list_orders(
-        session: AsyncSession = Depends(get_db_session)
+        session: AsyncSession = Depends(get_db_session),
+        current_user: dict = Depends(get_current_user)
 ):
     orders = await session.execute(select(Order))
     orders = orders.scalars().all()
@@ -32,7 +32,8 @@ async def list_orders(
 )
 async def get_order(
         order_id: int,
-        session: AsyncSession = Depends(get_db_session)
+        session: AsyncSession = Depends(get_db_session),
+        current_user: dict = Depends(get_current_user)
 ):
     order = await session.get(Order, order_id)
     if not order:
@@ -48,17 +49,16 @@ async def get_order(
 async def create_order(
         order: OrderCreate,
         session: AsyncSession = Depends(get_db_session),
-        users_client: httpx.AsyncClient = Depends(get_users_client)
+        # users_client: httpx.AsyncClient = Depends(get_users_client),
+        current_user: dict = Depends(get_current_user)
 ):
-    response = await users_client.get(f"/api/v1/user/{order.user_id}")
+    user_id = current_user.get("user_id")
 
-    if response.status_code == 404:
-        raise HTTPException(status_code=400, detail="User not found")
+    new_order = Order(
+        user_id=user_id,
+        **order.model_dump()
+    )
 
-    if response.status_code != 200:
-        raise HTTPException(status_code=503, detail="Users service unavailable")
-
-    new_order = Order(**order.model_dump())
     session.add(new_order)
     try:
         await session.commit()
@@ -78,21 +78,19 @@ async def update_order(
         order_id: int,
         order_data: OrderPut,
         session: AsyncSession = Depends(get_db_session),
-        users_client: httpx.AsyncClient = Depends(get_users_client)
+        current_user: dict = Depends(get_current_user),
+        # users_client: httpx.AsyncClient = Depends(get_users_client)
 ):
     order = await session.get(Order, order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    response = await users_client.get(f"/api/v1/user/{order_data.user_id}")
+    if order.user_id != current_user.get("user_id"):
+        raise HTTPException(status_code=403, detail="Forbidden")
 
-    if response.status_code == 404:
-        raise HTTPException(status_code=400, detail="User not found")
+    update_data = order_data.model_dump(exclude={"user_id"})
 
-    if response.status_code != 200:
-        raise HTTPException(status_code=503, detail="Users service unavailable")
-
-    for field, value in order_data.model_dump().items():
+    for field, value in update_data.items():
         setattr(order, field, value)
 
     try:
@@ -114,23 +112,23 @@ async def partial_update_order(
         order_id: int,
         order_data: OrderPatch,
         session: AsyncSession = Depends(get_db_session),
-        users_client: httpx.AsyncClient = Depends(get_users_client)
+        current_user: dict = Depends(get_current_user),
+        # users_client: httpx.AsyncClient = Depends(get_users_client)
 ):
     order = await session.get(Order, order_id)
     if not order:
         raise HTTPException(status_code=404, detail="Order not found")
 
-    update_data = order_data.model_dump(exclude_unset=True)
+    if order.user_id != current_user["user_id"]:
+        raise HTTPException(status_code=403, detail="Forbidden")
 
-    if "user_id" in update_data:
-        response = await users_client.get(f"/api/v1/user/{update_data['user_id']}")
+    update_data = order_data.model_dump(
+        exclude_unset=True,
+        exclude={"user_id"}
+    )
 
-        if response.status_code == 404:
-            raise HTTPException(status_code=400, detail="User not found")
-
-        if response.status_code != 200:
-            raise HTTPException(status_code=503, detail="Users service unavailable")
-
+    for field, value in update_data.items():
+        setattr(order, field, value)
     for field, value in update_data.items():
         setattr(order, field, value)
 
@@ -150,7 +148,8 @@ async def partial_update_order(
 )
 async def delete_order(
         order_id: int,
-        session: AsyncSession = Depends(get_db_session)
+        session: AsyncSession = Depends(get_db_session),
+        current_user: dict = Depends(get_current_user)
 ):
     order = await session.get(Order, order_id)
     if not order:
