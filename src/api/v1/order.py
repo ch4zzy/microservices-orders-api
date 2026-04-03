@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
-from api.dependencies import get_db_session, get_current_user
+from api.dependencies import get_db_session
 from database.models import Order
 from schemas.order import OrderList, OrderResponse, OrderCreate, OrderPut, OrderPatch
 
@@ -18,7 +18,6 @@ router = APIRouter(prefix="/order", tags=["order"])
 )
 async def list_orders(
         session: AsyncSession = Depends(get_db_session),
-        current_user: dict = Depends(get_current_user)
 ):
     orders = await session.execute(select(Order))
     orders = orders.scalars().all()
@@ -33,7 +32,6 @@ async def list_orders(
 async def get_order(
         order_id: int,
         session: AsyncSession = Depends(get_db_session),
-        current_user: dict = Depends(get_current_user)
 ):
     order = await session.get(Order, order_id)
     if not order:
@@ -49,10 +47,7 @@ async def get_order(
 async def create_order(
         order: OrderCreate,
         session: AsyncSession = Depends(get_db_session),
-        # users_client: httpx.AsyncClient = Depends(get_users_client),
-        current_user: dict = Depends(get_current_user)
 ):
-    user_id = current_user.get("user_id")
 
     new_order = Order(
         user_id=user_id,

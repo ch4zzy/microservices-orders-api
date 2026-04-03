@@ -17,7 +17,7 @@ class OrderResponse(OrderBase):
 
 
 class OrderCreate(OrderBase):
-    ...
+    user_id : int
 
 
 class OrderPut(OrderBase):
@@ -27,7 +27,6 @@ class OrderPut(OrderBase):
 class OrderPatch(BaseModel):
     name: Optional[str] = None
     quantity: Optional[int] = None
-    user_id: Optional[int] = None
 
 
 class OrderList(BaseModel):
